@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - makerx-1.0.9-clean
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -59,8 +62,9 @@ jobs:
           set -euo pipefail
           APK=makerx-project/app/build/outputs/apk/debug/app-debug.apk
           test -s "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | tee /tmp/badging.txt
+          BUILD_TOOLS=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK"
+          "$BUILD_TOOLS/aapt" dump badging "$APK" | tee /tmp/badging.txt
           grep -q "package: name='com.moritz.makerx109'" /tmp/badging.txt
           grep -q "launchable-activity: name='com.moritz.vescfix03.MainActivity'" /tmp/badging.txt
           cp "$APK" Makerx-1.0.9-Clean-Build.apk
