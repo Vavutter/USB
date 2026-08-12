@@ -1,4 +1,4 @@
-name: Build and launch-test Makerx 1.1.0 minimal branding
+name: Build and launch-test Makerx 1.1.1
 
 on:
   push:
@@ -13,153 +13,53 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
-
-      - name: Reconstruct clean source project
-        shell: bash
+      - name: Reconstruct source
         run: |
           set -euo pipefail
-          cat \
-            makerx109/parts/part00.b64 \
-            makerx109/parts/part01.b64 \
-            makerx109/parts/part02.b64 \
-            makerx109/parts/part03a.b64 \
-            makerx109/parts/part03b.b64 \
-            makerx109/parts/part03c.b64 \
-            makerx109/parts/part03d.b64 \
-            makerx109/parts/part04a.b64 \
-            makerx109/parts/part04b.b64 \
-            makerx109/parts/part04c.b64 \
-            makerx109/parts/part04d.b64 > /tmp/makerx-project.b64
-          base64 --decode /tmp/makerx-project.b64 > /tmp/makerx-project.zip
+          cat makerx109/parts/part00.b64 makerx109/parts/part01.b64 makerx109/parts/part02.b64 makerx109/parts/part03a.b64 makerx109/parts/part03b.b64 makerx109/parts/part03c.b64 makerx109/parts/part03d.b64 makerx109/parts/part04a.b64 makerx109/parts/part04b.b64 makerx109/parts/part04c.b64 makerx109/parts/part04d.b64 > /tmp/project.b64
+          base64 --decode /tmp/project.b64 > /tmp/project.zip
           mkdir -p makerx-project
-          unzip -q /tmp/makerx-project.zip -d makerx-project
-
-      - name: Restore VESC terminology and keep only large Makerx branding
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          root = Path('makerx-project')
-          main = root/'app/src/main/java/com/moritz/vescfix03/MainActivity.java'
-          s = main.read_text()
-          replacements = {
-            'getSharedPreferences("makerx_profiles", MODE_PRIVATE)': 'getSharedPreferences("legal_vesc", MODE_PRIVATE)',
-            'Makerx konnte die Oberfläche nicht vollständig starten.': 'VESC Legal konnte die Oberfläche nicht vollständig starten.',
-            'TextView brand = Ui.text(this, "Makerx", 30, Ui.TEXT, true);': 'TextView brand = Ui.text(this, "MAKERX", 30, Ui.TEXT, true);',
-            'Die App scannt ohne Namensfilter. Nach dem Verbinden erkennt sie Nordic UART, FFE0/FFE1, FFF0/FFF1/FFF2 sowie passende Schreib-/Notify-Charakteristiken. Eine gültige Makerx-Firmwareantwort bestätigt die Makerx-Verbindung.': 'Die App filtert beim Scannen nicht nach Namen oder Service. Nach dem Verbinden erkennt sie Nordic UART, FFE0/FFE1, FFF0/FFF1/FFF2 und passende Schreib-/Notify-Charakteristiken automatisch. Erst eine gültige VESC-Firmwareantwort gilt als echte VESC-Verbindung.',
-            'Kein Makerx verbunden': 'Kein VESC verbunden',
-            'Live-Werte werden erst nach einer gültigen Makerx-Protokollantwort angezeigt.': 'Live-Werte werden erst nach einer gültigen VESC-Protokollantwort angezeigt.',
-            'Auf Makerx anwenden': 'Auf VESC anwenden',
-            'Makerx nicht verbunden': 'VESC nicht verbunden',
-            'Separat programmierte Makerx-Controller (1–4)': 'Separat programmierte VESC-Controller (1–4)',
-            'Pro Controller: Profil-Gesamtwatt ÷ Anzahl separat programmierter Makerx-Controller. Danach gilt Batteriestrom-Limit = Controller-Watt ÷ max(gemessene Spannung, Akku-Maximalspannung). Das native Makerx-Wattlimit wird ebenfalls geschrieben.': 'Pro Controller: Profil-Gesamtwatt ÷ Anzahl separat programmierter VESCs. Danach gilt Batteriestrom-Limit = Controller-Watt ÷ max(gemessene Spannung, Akku-Maximalspannung). Das native VESC-Wattlimit wird ebenfalls geschrieben.',
-            'safety.addView(Ui.text(this, "Feste Limits", 20, Ui.WARNING, true));': 'safety.addView(Ui.text(this, "Wichtiger Betriebshinweis", 20, Ui.WARNING, true));',
-            'Maximal 25 km/h Zielgeschwindigkeit und maximal 600 W elektrische Leistung. Diese Werte sind in UI, Domain-Logik und Makerx-Schreibschicht erzwungen.': 'Die App ersetzt keine mechanische Geschwindigkeitsbegrenzung, Betriebserlaubnis oder fachgerechte VESC-Konfiguration. Vor Änderungen Rad frei aufbocken, Eingangssignal deaktivieren, Sicherung verwenden und die zurückgelesenen Werte prüfen.',
-            'Der aktuelle Makerx-Zustand bleibt unverändert.': 'Der aktuelle VESC-Zustand bleibt unverändert.',
-            'Profil auf Makerx schreiben?': 'Profil auf VESC schreiben?',
-            'return "Makerx verbunden";': 'return "VESC verbunden";',
-            'return "BLE verbunden · Makerx-Prüfung";': 'return "BLE verbunden · VESC-Prüfung";',
-            'text = "Makerx " + ble.getFirmwareText();': 'text = "VESC " + ble.getFirmwareText();'
-          }
-          for a,b in replacements.items():
-              if a not in s:
-                  raise SystemExit(f'Missing expected MainActivity text: {a}')
-              s=s.replace(a,b)
-          main.write_text(s)
-
-          ble = root/'app/src/main/java/com/moritz/vescfix03/BleManager.java'
-          s=ble.read_text()
-          replacements = {
-            'Zuerst mit dem Makerx verbinden.':'Zuerst mit dem VESC verbinden.',
-            'Zeitüberschreitung. Am Makerx wurde kein bestätigter Profilwechsel erkannt.':'Zeitüberschreitung. Am VESC wurde kein bestätigter Profilwechsel erkannt.',
-            'Makerx Controller':'VESC-kompatibler Controller',
-            'postMessage("Makerx " + getFirmwareText() + " verbunden.", false);':'postMessage("VESC " + getFirmwareText() + " verbunden.", false);',
-            'bereit; Makerx wird abgefragt …':'bereit; VESC wird abgefragt …',
-            'BLE ist verbunden, aber der Makerx antwortet nicht.':'BLE ist verbunden, aber der VESC antwortet nicht.'
-          }
-          for a,b in replacements.items():
-              if a not in s:
-                  raise SystemExit(f'Missing expected BleManager text: {a}')
-              s=s.replace(a,b)
-          ble.write_text(s)
-
-          proto = root/'app/src/main/java/com/moritz/vescfix03/VescProtocol.java'
-          s=proto.read_text()
-          if 'Ungültiger Makerx-Datenrahmen' not in s:
-              raise SystemExit('Missing expected protocol text')
-          proto.write_text(s.replace('Ungültiger Makerx-Datenrahmen','Ungültiger VESC-Datenrahmen'))
-
-          build = root/'app/build.gradle'
-          s=build.read_text()
-          s=s.replace('applicationId "com.moritz.makerx109"','applicationId "com.moritz.makerxminimal110"')
-          s=s.replace('versionCode 10','versionCode 11').replace('versionName "1.0.9"','versionName "1.1.0"')
-          build.write_text(s)
-
-          manifest = root/'app/src/main/AndroidManifest.xml'
-          s=manifest.read_text()
-          if 'android:label="Makerx"' not in s:
-              raise SystemExit('Makerx app label missing')
-          manifest.write_text(s)
-          PY
-
-          grep -q 'Ui.text(this, "MAKERX", 30' makerx-project/app/src/main/java/com/moritz/vescfix03/MainActivity.java
-          grep -q 'Kein VESC verbunden' makerx-project/app/src/main/java/com/moritz/vescfix03/MainActivity.java
-          grep -q 'Auf VESC anwenden' makerx-project/app/src/main/java/com/moritz/vescfix03/MainActivity.java
-          grep -q 'android:label="Makerx"' makerx-project/app/src/main/AndroidManifest.xml
-          grep -q 'applicationId "com.moritz.makerxminimal110"' makerx-project/app/build.gradle
-
-      - name: Build signed debug APK from source
+          unzip -q /tmp/project.zip -d makerx-project
+          python3 makerx111/patch.py
+      - name: Build APK
         working-directory: makerx-project
-        run: gradle --no-daemon --stacktrace assembleDebug
-
-      - name: Verify APK
-        shell: bash
+        run: gradle --no-daemon assembleDebug
+      - name: Verify and package
         run: |
           set -euo pipefail
           APK=makerx-project/app/build/outputs/apk/debug/app-debug.apk
-          test -s "$APK"
           BUILD_TOOLS=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
           "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK"
           "$BUILD_TOOLS/aapt" dump badging "$APK" | tee /tmp/badging.txt
-          grep -q "package: name='com.moritz.makerxminimal110'" /tmp/badging.txt
+          grep -q "package: name='com.moritz.makerx111'" /tmp/badging.txt
           grep -q "launchable-activity: name='com.moritz.vescfix03.MainActivity'" /tmp/badging.txt
-          cp "$APK" Makerx-1.1.0-Minimal-Branding.apk
-          sha256sum Makerx-1.1.0-Minimal-Branding.apk > Makerx-1.1.0-Minimal-Branding.sha256.txt
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+          cp "$APK" Makerx-1.1.1.apk
+          sha256sum Makerx-1.1.1.apk > Makerx-1.1.1.sha256.txt
+      - uses: actions/upload-artifact@v4
         with:
-          name: Makerx-1.1.0-Minimal-Branding
+          name: Makerx-1.1.1
           path: |
-            Makerx-1.1.0-Minimal-Branding.apk
-            Makerx-1.1.0-Minimal-Branding.sha256.txt
+            Makerx-1.1.1.apk
+            Makerx-1.1.1.sha256.txt
           if-no-files-found: error
-          retention-days: 30
 
   launch-test:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Download APK
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
-          name: Makerx-1.1.0-Minimal-Branding
+          name: Makerx-1.1.1
           path: artifact
-
-      - name: Launch APK on Android 15 emulator
+      - name: Launch on Android 15 emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -170,22 +70,9 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
             set -e
-            adb install artifact/Makerx-1.1.0-Minimal-Branding.apk
+            adb install artifact/Makerx-1.1.1.apk
             adb logcat -c
-            adb shell am start -W -n com.moritz.makerxminimal110/com.moritz.vescfix03.MainActivity | tee /tmp/start.txt
+            adb shell am start -W -n com.moritz.makerx111/com.moritz.vescfix03.MainActivity
             sleep 5
-            PID=$(adb shell pidof com.moritz.makerxminimal110 | tr -d '\r')
-            test -n "$PID"
-            if adb logcat -d -v brief | grep -E 'FATAL EXCEPTION|Process: com\.moritz\.makerxminimal110.*has died'; then
-              adb logcat -d
-              exit 1
-            fi
-            adb exec-out screencap -p > Makerx-1.1.0-emulator.png
-
-      - name: Upload launch-test screenshot
-        uses: actions/upload-artifact@v4
-        with:
-          name: Makerx-1.1.0-Launch-Test
-          path: Makerx-1.1.0-emulator.png
-          if-no-files-found: error
-          retention-days: 30
+            test -n "$(adb shell pidof com.moritz.makerx111 | tr -d '\r')"
+            ! adb logcat -d -v brief | grep -E 'FATAL EXCEPTION|Process: com\.moritz\.makerx111.*has died'
